@@ -22,7 +22,7 @@ BATCH_SIZE = 20
 
 EXPLORATION_MAX = 1.0
 EXPLORATION_MIN = 0.01
-EXPLORATION_DECAY = 0.995
+EXPLORATION_DECAY = 0.99
 
 
 class DQNSolver:
@@ -74,7 +74,10 @@ class DQNSolver:
             q_values = self.model.predict(state)
             q_values[0][action] = q_update
             self.model.fit(state, q_values, verbose=0, callbacks=[self.cp_callback])
+
+    def updateExploration_rate(self):
         self.exploration_rate *= EXPLORATION_DECAY
+        print('updated', self.exploration_rate)
         self.exploration_rate = max(EXPLORATION_MIN, self.exploration_rate)
 
 
@@ -84,6 +87,7 @@ def msPacman():
     observation_space = env.observation_space.shape[0]
     action_space = env.action_space.n
     dqn_solver = DQNSolver(observation_space, action_space)
+    print('start', dqn_solver.exploration_rate)
     run = 0
     while True:
         run += 1
@@ -103,8 +107,10 @@ def msPacman():
                 print("Run: " + str(run) + ", exploration: " + str(dqn_solver.exploration_rate) + ", score: " + str(step))
                 score_logger.add_score(step, run, dqn_solver.exploration_rate)
                 print(step, run)
+                dqn_solver.updateExploration_rate()
                 break
             dqn_solver.experience_replay()
+
 
 
 if __name__ == "__main__":
