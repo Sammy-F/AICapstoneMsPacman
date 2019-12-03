@@ -21,21 +21,21 @@ class ScoreLogger:
         self.scores = deque(maxlen=CONSECUTIVE_RUNS_TO_SOLVE)
         self.env_name = env_name
 
-        if os.path.exists(SCORES_PNG_PATH):
-            os.remove(SCORES_PNG_PATH)
-        if os.path.exists(SCORES_CSV_PATH):
-            os.remove(SCORES_CSV_PATH)
+        # if os.path.exists(SCORES_PNG_PATH):
+        #     os.remove(SCORES_PNG_PATH)
+        # if os.path.exists(SCORES_CSV_PATH):
+        #     os.remove(SCORES_CSV_PATH)
 
-    def add_score(self, score, run):
-        self._save_csv(SCORES_CSV_PATH, score)
-        self._save_png(input_path=SCORES_CSV_PATH,
-                       output_path=SCORES_PNG_PATH,
-                       x_label="runs",
-                       y_label="scores",
-                       average_of_n_last=CONSECUTIVE_RUNS_TO_SOLVE,
-                       show_goal=True,
-                       show_trend=True,
-                       show_legend=True)
+    def add_score(self, score, run, exploration_rate):
+        self._save_csv(SCORES_CSV_PATH, score, exploration_rate)
+        # self._save_png(input_path=SCORES_CSV_PATH,
+        #                output_path=SCORES_PNG_PATH,
+        #                x_label="runs",
+        #                y_label="scores",
+        #                average_of_n_last=CONSECUTIVE_RUNS_TO_SOLVE,
+        #                show_goal=True,
+        #                show_trend=True,
+        #                show_legend=True)
         self.scores.append(score)
         mean_score = mean(self.scores)
         print("Scores: (min: " + str(min(self.scores)) + ", avg: " + str(mean_score) + ", max: " + str(max(self.scores)) + ")\n")
@@ -43,14 +43,14 @@ class ScoreLogger:
             solve_score = run-CONSECUTIVE_RUNS_TO_SOLVE
             print("Solved in " + str(solve_score) + " runs, " + str(run) + " total runs.")
             self._save_csv(SOLVED_CSV_PATH, solve_score)
-            self._save_png(input_path=SOLVED_CSV_PATH,
-                           output_path=SOLVED_PNG_PATH,
-                           x_label="trials",
-                           y_label="steps before solve",
-                           average_of_n_last=None,
-                           show_goal=False,
-                           show_trend=False,
-                           show_legend=False)
+            # self._save_png(input_path=SOLVED_CSV_PATH,
+            #                output_path=SOLVED_PNG_PATH,
+            #                x_label="trials",
+            #                y_label="steps before solve",
+            #                average_of_n_last=None,
+            #                show_goal=False,
+            #                show_trend=False,
+            #                show_legend=False)
             exit()
 
     def _save_png(self, input_path, output_path, x_label, y_label, average_of_n_last, show_goal, show_trend, show_legend):
@@ -89,11 +89,11 @@ class ScoreLogger:
         plt.savefig(output_path, bbox_inches="tight")
         plt.close()
 
-    def _save_csv(self, path, score):
+    def _save_csv(self, path, score, exploration_rate):
         if not os.path.exists(path):
             with open(path, "w"):
                 pass
         scores_file = open(path, "a")
         with scores_file:
             writer = csv.writer(scores_file)
-            writer.writerow([score])
+            writer.writerow([score] + [exploration_rate])
