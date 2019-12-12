@@ -19,7 +19,7 @@ import numpy as np
 
 from game import Agent
 
-class ReflexAgent(Agent):
+class LearningAgent(Agent):
     """
       A reflex agent chooses an action at each choice point by examining
       its alternatives via a state evaluation function.
@@ -30,54 +30,93 @@ class ReflexAgent(Agent):
     """
 
     rlTable = np.zeros((4, 4))
+    learningRate = .1
+    alpha = .5
     def getAction(self, gameState):
         """
-        You do not need to change this method, but you're welcome to.
-
-        getAction chooses among the best options according to the evaluation function.
-
-        Just like in the previous project, getAction takes a GameState and returns
-        some Directions.X for some X in the set {North, South, West, East, Stop}
+        Look at legal moves and where direction is to get next move from the table
+        then update the table using hte reward from that action
         """
-        # Collect legal moves and successor states
+        # Collect legal moves and action states
         legalMoves = gameState.getLegalActions()
-        print(gameState.getGhostDirections())
-        print(gameState.getScore())
-        print(gameState.generatePacmanSuccessor(legalMoves[0]).getScore())
-        print()
-        # Choose one of the best actions
-        scores = [self.evaluationFunction(gameState, action) for action in legalMoves]
-        bestScore = max(scores)
-        bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
-        chosenIndex = random.choice(bestIndices) # Pick randomly among the best
+        actions = ['North', 'East', 'South', 'West']
 
         # get info about game
         ghostDir = gameState.getGhostDirections()
+        possActions = self.legalToIndices(legalMoves)
 
         # pick action
-        action = self.pickMaxAction(ghostDir)
-        #
-        # # q-learning
-        # reward = gameState.getScore - gameState.generatePacmanSuccessor(action).getScore() + 1.0
-        # updateTable(ghostDir, action, reward)
+        action, ghostDirIndex = self.pickMaxAction(ghostDir, possActions)
 
-        "Add more of your code here if you want to"
-        print(len(legalMoves), legalMoves, action)
-        return legalMoves[action]
+        if not action:
+            dir = random.choice(legalMoves)
+            action = actions.index(dir)
 
-    def pickMaxAction(self, ghostDir):
-        max = None
-        maxVal = 0
+        # q-learning
+        reward = self.calcReward(gameState, actions[action])
+        self.updateTable(ghostDirIndex, action, reward)
+
+        print(self.rlTable)
+
+        return actions[action]
+
+    def calcReward(self, gameState, action):
+        """ Looking at the score difference before / after action is taken, adjust
+        the reward accordingly """
+        scoreDiff = gameState.generatePacmanSuccessor(action).getScore() - gameState.getScore()
+        # if you run into ghost, reward is -50
+        if scoreDiff == -501.0:
+            return -50.0
+
+        # if you stay alive, reward is 5.0
+        elif scoreDiff == -1.0:
+            return 5.0
+
+        # if you get pellet, reward is 5.0
+        elif scoreDiff == 9.0:
+            return 5.0
+
+        return 5.0
+
+    def updateTable(self, ghostDir, action, reward):
+        """ Update the reinforcement learning table according to where on the table
+        action was from and what end reward was """
+        if not ghostDir:
+            return
+        oldVal = self.rlTable[ghostDir][action]
+        self.rlTable[ghostDir][action] = (1-self.alpha)*oldVal + self.learningRate * (reward)
+
+    def pickMaxAction(self, ghostDir, legalIndices):
+        """ Look at all directions ghosts are in and in table, find action w/ highest
+        reward value for that ghost direction """
+        action = None
+        ghostDirI = None
+        actionVal = 0
         for i in range(len(ghostDir)):
             if ghostDir[i]:
-                tempMax = np.argmax(self.rlTable[i])
-                tempMaxVal = self.rlTable[i][max[1]]
-                if tempMaxVal > maxVal:
-                    maxVal = tempMaxVal
-                    max = tempMax
-        if maxVal == 0:
-            return random.randrange(4)
-        return max
+                for j in range(len(legalIndices)):
+
+                    if legalIndices[j]:
+                        tempActionVal = self.rlTable[i][j]
+                        if tempActionVal >= actionVal:
+                            actionVal = tempActionVal
+                            action = j
+                            ghostDirI = i
+                            print(i, j)
+
+                # tempAction = np.argmax(self.rlTable[i])
+                # if legalIndices[tempAction]:
+        return action, ghostDirI
+
+    def legalToIndices(self, legalMoves):
+        """ make list where True corresponds to direction it is legal for pacman
+        to move in """
+        legal = [False, False, False, False]
+        directions = ['North', 'East', 'South', 'West']
+        for i in range(len(directions)):
+            if directions[i] in legalMoves:
+                legal[i] = True
+        return legal
 
     def evaluationFunction(self, currentGameState, action):
         """
